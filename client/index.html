@@ -7,7 +7,7 @@
 		<link rel="stylesheet" type="text/css" href="css/robotorn.css" />
 	</head>
 	<body>
-		<nav class="navbar navbar-inverse navbar-fixed-top">
+		<nav class="navbar navbar-inverse navbar-fixed-top navbar-collapse collapse" ng-controller="NavController">
 			<ul class="nav navbar-nav">
 				<li>
 					<a href="#/">Home</a>
@@ -15,15 +15,23 @@
 				<li>
 					<a href="#/standings">Standings</a>
 				</li>
-				<li>
-					<a href="#/upload">Add participant</a>
+				<li ng-show="loggedIn">
+					<a href="#/upload">Upload Robot</a>
+				</li>
+			</ul>
+			<ul class="nav navbar-nav navbar-right">
+				<li ng-hide="loggedIn">
+					<a class="btn btn-inverse" href="#/login">Login/Register</a>
+				</li>
+				<li ng-show="loggedIn">
+					<a class="btn btn-inverse" href="#/logout">Logout</a>
 				</li>
 			</ul>
 		</nav>
 		<main class="view-container" ng-view>
 		</main>
-		<script src="http://code.jquery.com/jquery-2.1.4.min.js"></script>
-		<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+		<script src="//code.jquery.com/jquery-2.1.4.min.js"></script>
+		<script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
 		<script type="text/javascript" src="js/robocode-tournament.js"></script>
 	</body>
 </html>

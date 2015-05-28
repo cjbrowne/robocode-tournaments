@@ -1,3 +1,5 @@
+// TODO: more than one file?
+
 var express = require('express');
 
 var app = express();
@@ -6,16 +8,34 @@ var pg = require('pg');
 var config = require('./config');
 var _ = require('lodash-node');
 var crypto = require('crypto');
+var sendmail = require('./sendmail');
 
 // use CRUD verbs for db operations
 var query = {
 	read_participants: '\
-			SELECT authors.name AS author_name, participants.name AS name \
-				FROM participants \
-				INNER JOIN authors \
-					ON (participants.author = authors.id)',
+			SELECT author.name AS author_name, participant.name AS name \
+				FROM participant \
+				INNER JOIN author \
+					ON (participant.author = author.id)',
 	create_author: '\
-			INSERT INTO authors (name, email, activation_code) VALUES($1::text, $2::text, $3::text)'
+			INSERT INTO author (name, email, secret, activation_code) VALUES($1::text, $1::text, $2::text, $3::text)\
+			',
+	activate_author:'\
+			UPDATE author SET activated=TRUE\
+			WHERE\
+				activation_code = $1::text\
+			RETURNING\
+				activated,\
+				email\
+			',
+	authenticate_user: '\
+			SELECT EXISTS (\
+				SELECT id\
+					FROM author\
+					WHERE email=$1\
+						AND secret=$2\
+				) AS logged_in\
+			'
 };
 
 // even though we might never start listening, best to prepare the app above any logic
@@ -30,7 +50,46 @@ app.use(function (err, req, res, next) {
 	} else {
 		next();
 	}
-})
+});
+app.use(function (req, res, next) {
+	res.header('Access-Control-Allow-Origin', config.allowOrigin || '*');
+	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+	next();
+});
+
+// some useful functions
+var hashPassword = function (password) {
+	var hasher = crypto.createHash('sha512');
+
+	// suggestion: set prePasswordSalt and postPasswordSalt to long, high-entropy random strings.
+	hasher.update(config.prePasswordSalt);
+	hasher.update(password);
+	hasher.update(config.postPasswordSalt);
+	
+	return hasher.digest('base64');
+}
+
+var requestCount = {};
+
+var rateLimit = function (req, res, resource) {
+	// coerce null to a number
+	requestCount[req.ip] = requestCount[req.ip] || 0;
+	requestCount[req.ip]++;
+	// after a minute, remove this attempt
+	setTimeout(function () {
+		requestCount[req.ip]--;
+	}, 60000);
+	if(requestCount[req.ip] && requestCount[req.ip] > 15) {
+		// rate limit those fuckers
+		res.status(418).send({
+			swaghetti: 'yolonaise',
+			mother: 'fucker',
+			message: 'Too many ' + resource + ' attempts.  Please wait 5 minutes before trying again.'
+		});
+		return true;
+	}
+	return false;
+}
 
 pg.connect(config.pg_connection_string, function (err, client, done) {
 	if(err) {
@@ -60,16 +119,49 @@ pg.connect(config.pg_connection_string, function (err, client, done) {
 	});
 
 	var generateActivationCode = function () {
-		return crypto.randomBytes(64).toString('base64').replace(/\//g,'_').replace(/\+/g,'-');
+		return crypto.randomBytes(64).toString('base64').replace(/\//g,'_').replace(/\+/g,'-').replace(/\=/g,'');
 	}
 
-	// register new author
-	app.post('/author', function (req, res) {
-		if(req.body.email) {
+	// activate author *idempotently*
+	app.post('/activate', function (req, res) {
+		if(req.body.code) {
+			client.query(query.activate_author, [
+				req.body.code
+			], function (err, result) {
+				if(err) {
+					res.status(500).send({
+						message:'Postgres error',
+						details: err
+					});
+				} else {
+					if(result.rows.length == 0) {
+						res.status(404).send({
+							message: 'User not found',
+							details: null
+						});
+					} else {
+						res.status(200).send({
+							activated: result.rows[0].activated,
+							email: result.rows[0].email
+						});
+					}
+				}
+			});
+		}
+	});
+
+
+	// register new user
+	app.post('/register', function (req, res) {
+		var activationCode;
+		if(rateLimit(req, res, 'registration')) return;
+		
+		if(req.body.email && req.body.password) {
+			activationCode = generateActivationCode();
 			client.query(query.create_author, [
-				req.body.name, 
-				req.body.email, 
-				generateActivationCode()
+				req.body.email,
+				hashPassword(req.body.password),
+				activationCode
 				], function (err, result) {
 				if(err) {
 					if(err.constraint) {
@@ -94,10 +186,46 @@ pg.connect(config.pg_connection_string, function (err, client, done) {
 						});
 					}
 				} else {
-					res.status(200).send({});
+					sendmail(req.body.email, activationCode);
+					// user successfully created
+					res.status(201).send({});
 				}
 			});
+		} else {
+			res.status(422).send({
+				message: 'Missing credentials'
+			});
 		}
+	});
+
+	// login
+	app.post('/login', function (req, res) {
+		if(!req.body.password || !req.body.email) {
+			res.status(422).send({
+				message: 'Missing credentials'
+			});
+			return;
+		}
+		var passwordHash = hashPassword(req.body.password);
+		if(rateLimit(req, res, 'login')) return;
+		client.query(query.authenticate_user, [
+				req.body.email,
+				passwordHash
+			],function (err, result) {
+			if(err) {
+				// I'm not being funny or anything, but leaking ANYTHING
+				// at this stage is a *really* bad idea so not even development
+				// builds should get details on errors at this point
+				res.status(500).send({
+					error: 'Postgres error',
+					details: null
+				});
+			} else {
+				res.status(200).send({
+					loggedIn: result.rows[0].logged_in
+				});
+			}
+		})
 	});
 
 	app.get('/', function (req, res) {
