@@ -1,0 +1,33 @@
+{
+  "name": "robocode-tournament-client",
+  "version": "0.0.0",
+  "description": "Client code for robocode tournament organisational software",
+  "main": "src/main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "robocode"
+  ],
+  "author": "Chris Browne <yoda2031@gmail.com>",
+  "license": "GPL",
+  "devDependencies": {
+    "browserify": "^10.2.1",
+    "gulp": "^3.8.11",
+    "gulp-concat": "^2.5.2",
+    "gulp-connect": "^2.2.0",
+    "gulp-rename": "^1.2.2",
+    "gulp-sass": "^2.0.1",
+    "gulp-sourcemaps": "^1.5.2",
+    "gulp-uglify": "^1.2.0",
+    "gulp-util": "^3.0.4",
+    "lodash.assign": "^3.2.0",
+    "vinyl-buffer": "^1.0.0",
+    "vinyl-source-stream": "^1.1.0",
+    "watchify": "^3.2.1"
+  },
+  "dependencies": {
+    "angular": "^1.4.0",
+    "angular-route": "^1.4.0"
+  }
+}

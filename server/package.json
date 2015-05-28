@@ -1,0 +1,20 @@
+{
+  "name": "robocode-tournament-server",
+  "version": "0.0.0",
+  "description": "Server for robocode tournament organisational software",
+  "main": "main.js",
+  "scripts": {
+    "test": "npm test"
+  },
+  "keywords": [
+    "robocode"
+  ],
+  "author": "Chris Browne <yoda2031@gmail.com>",
+  "license": "GPL",
+  "dependencies": {
+    "body-parser": "^1.12.4",
+    "express": "^4.12.4",
+    "lodash-node": "^3.9.3",
+    "pg": "^4.3.0"
+  }
+}

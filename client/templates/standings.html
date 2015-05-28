@@ -1,0 +1,9 @@
+<div class="standings">
+	<div class="tier" ng-repeat="tier in tiers">
+		<div class="{{bout.class}}" ng-repeat="bout in tier">
+			<div class="participant" ng-repeat="participant in bout.participants">
+				{{participant.name}} by {{participant.author}}
+			</div>
+		</div>
+	</div>
+</div>
