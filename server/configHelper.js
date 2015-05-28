@@ -1,6 +1,6 @@
 var config = require('./config');
 
-module.exports = function (key, defaultValue, cnf) {
+module.exports = function safeGetConfig(key, defaultValue, cnf) {
 	var keys = key.split('.');
 	if(!cnf) return safeGetConfig(key, defaultValue, config);
 	if(!cnf[keys[0]]) {
