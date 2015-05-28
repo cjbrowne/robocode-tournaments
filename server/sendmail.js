@@ -10,19 +10,7 @@ var emailTemplate = fs.readFileSync('./templates/email.jade');
 // function to return a config parameter from config without triggering an error if it
 // or any parent keys are missing
 // using a fancy recursive algorithm because fuck maintenance I guess
-var safeGetConfig = function (key, cnf) {
-	var keys = key.split('.');
-	if(!cnf) return safeGetConfig(key, config);
-	if(!cnf[keys[0]]) {
-		return null;
-	} else {
-		if (keys.length > 1) {
-			return safeGetConfig(key, cnf[keys[0]]);
-		} else {
-			return cnf[keys[0]];
-		}
-	}
-}
+var safeGetConfig = require('./configHelper');
 
 var transporter = nodemailer.createTransport(smtpTransport({
 	host: safeGetConfig('mail.exchange.host'),

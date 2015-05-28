@@ -5,10 +5,12 @@ var express = require('express');
 var app = express();
 var bodyParser = require('body-parser');
 var pg = require('pg');
+// TODO: replace 'config' uses with the config helper (safeGetConfig)
 var config = require('./config');
 var _ = require('lodash-node');
 var crypto = require('crypto');
 var sendmail = require('./sendmail');
+var safeGetConfig = require('./configHelper');
 
 // use CRUD verbs for db operations
 var query = {
@@ -71,7 +73,7 @@ var hashPassword = function (password) {
 
 var requestCount = {};
 
-var rateLimit = function (req, res, resource) {
+var rateLimit = function (maxTries, req, res, resource) {
 	// coerce null to a number
 	requestCount[req.ip] = requestCount[req.ip] || 0;
 	requestCount[req.ip]++;
@@ -124,6 +126,7 @@ pg.connect(config.pg_connection_string, function (err, client, done) {
 
 	// activate author *idempotently*
 	app.post('/activate', function (req, res) {
+		if (rateLimit(safeGetConfig('config.rateLimit.activate', 3), req, res, 'activation')) return;
 		if(req.body.code) {
 			client.query(query.activate_author, [
 				req.body.code
@@ -154,7 +157,7 @@ pg.connect(config.pg_connection_string, function (err, client, done) {
 	// register new user
 	app.post('/register', function (req, res) {
 		var activationCode;
-		if(rateLimit(req, res, 'registration')) return;
+		if(rateLimit(safeGetConfig('config.rateLimit.activate', 5), req, res, 'registration')) return;
 		
 		if(req.body.email && req.body.password) {
 			activationCode = generateActivationCode();
@@ -207,7 +210,7 @@ pg.connect(config.pg_connection_string, function (err, client, done) {
 			return;
 		}
 		var passwordHash = hashPassword(req.body.password);
-		if(rateLimit(req, res, 'login')) return;
+		if(rateLimit(safeGetConfig('config.rateLimit.activate', 5), req, res, 'login')) return;
 		client.query(query.authenticate_user, [
 				req.body.email,
 				passwordHash
