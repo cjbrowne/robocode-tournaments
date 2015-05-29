@@ -126,7 +126,7 @@ pg.connect(config.pg_connection_string, function (err, client, done) {
 
 	// activate author *idempotently*
 	app.post('/activate', function (req, res) {
-		if (rateLimit(safeGetConfig('config.rateLimit.activate', 3), req, res, 'activation')) return;
+		if (rateLimit(safeGetConfig('rateLimit.activate', 3), req, res, 'activation')) return;
 		if(req.body.code) {
 			client.query(query.activate_author, [
 				req.body.code
@@ -157,7 +157,7 @@ pg.connect(config.pg_connection_string, function (err, client, done) {
 	// register new user
 	app.post('/register', function (req, res) {
 		var activationCode;
-		if(rateLimit(safeGetConfig('config.rateLimit.activate', 5), req, res, 'registration')) return;
+		if(rateLimit(safeGetConfig('rateLimit.register', 5), req, res, 'registration')) return;
 		
 		if(req.body.email && req.body.password) {
 			activationCode = generateActivationCode();
@@ -210,7 +210,7 @@ pg.connect(config.pg_connection_string, function (err, client, done) {
 			return;
 		}
 		var passwordHash = hashPassword(req.body.password);
-		if(rateLimit(safeGetConfig('config.rateLimit.activate', 5), req, res, 'login')) return;
+		if(rateLimit(safeGetConfig('rateLimit.login', 5), req, res, 'login')) return;
 		client.query(query.authenticate_user, [
 				req.body.email,
 				passwordHash

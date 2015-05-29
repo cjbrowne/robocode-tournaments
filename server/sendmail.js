@@ -14,13 +14,16 @@ var safeGetConfig = require('./configHelper');
 
 var transporter = nodemailer.createTransport(smtpTransport({
 	host: safeGetConfig('mail.exchange.host'),
-	port: safeGetConfig('mail.exchange.port')
+	port: safeGetConfig('mail.exchange.port'),
+	secure: false,
+	ignoreTLS: true,
+	debug: true
 }));
 
 module.exports = function (to, activationCode) {
 
 	var mailOptions = {
-	    from: config.mail.fromAddress, 
+	    from: safeGetConfig('mail.fromAddress'), 
 	    to: to.split(',')[0], 
 	    subject: 'Robocode Tournament requires activation!',
 	    html: jade.compile(emailTemplate)({
