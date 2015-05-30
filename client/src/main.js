@@ -12,10 +12,12 @@ var NavController = require('./controllers/NavController');
 // services
 var ConfigService = require('./services/ConfigService');
 var AuthService = require('./services/AuthService');
+var RobotService = require('./services/RobotService');
 
 angular.module('RobocodeTournament', [require('angular-route')])
 	.factory('ConfigService', ConfigService)
 	.factory('AuthService', AuthService)
+	.factory('RobotService', RobotService)
 	.controller('NavController', ['$scope', '$rootScope', NavController])
 	.config(function ($routeProvider, $locationProvider) {
 
@@ -28,7 +30,7 @@ angular.module('RobocodeTournament', [require('angular-route')])
 				controller: TournamentStandingsController,
 				templateUrl: 'templates/standings.html'
 			})
-			.when('/upload', {
+			.when('/robot', {
 				controller: AddParticipantController,
 				templateUrl: 'templates/upload.html'
 			})

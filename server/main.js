@@ -14,6 +14,7 @@ var safeGetConfig = require('./configHelper');
 
 // use CRUD verbs for db operations
 var query = {
+	// is read_participants actually used?
 	read_participants: '\
 			SELECT author.name AS author_name, participant.name AS name \
 				FROM participant \
@@ -31,13 +32,29 @@ var query = {
 				email\
 			',
 	authenticate_user: '\
-			SELECT EXISTS (\
-				SELECT id\
-					FROM author\
-					WHERE email=$1\
-						AND secret=$2\
-				) AS logged_in\
+			SELECT id\
+				FROM author\
+				WHERE email=$1\
+					AND secret=$2\
+			',
+	fetch_robots: '\
+			SELECT class, repo\
+				FROM participant\
+				WHERE author = $1::integer\
+			',
+	update_robots: '\
+			INSERT INTO participant (repo, class, author)\
+				SELECT $1::text, $2::text, $3::integer\
+				WHERE NOT EXISTS (\
+						SELECT * FROM participant WHERE author = $3::integer\
+					)\
 			'
+			/*
+			;\
+			UPDATE participant\
+				SET repo = $1::text, class = $2::text\
+				WHERE author = $3::integer\
+	'*/
 };
 
 // even though we might never start listening, best to prepare the app above any logic
@@ -56,6 +73,7 @@ app.use(function (err, req, res, next) {
 app.use(function (req, res, next) {
 	res.header('Access-Control-Allow-Origin', config.allowOrigin || '*');
 	res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+	res.header('Access-Control-Allow-Methods', 'GET, PUT, POST, DELETE');
 	next();
 });
 
@@ -98,6 +116,35 @@ pg.connect(config.pg_connection_string, function (err, client, done) {
 		console.log('pg error',err);
 		return;
 	}
+
+	// for simplicity's sake, just an in-memory hashtable of sessions (won't work at scale but this whole project won't work at scale)
+	var sessions = {};
+
+	setInterval(function () {
+		var now = Date.now();
+
+		_.each(sessions, function (session, sessionId) {
+			// sessionTimeout is specified in minutes
+			if(now - session.lastActive > (config.sessionTimeout * 60000)) {
+				delete sessions[sessionId];
+			}
+		});
+
+	// there's no reason to run this too often
+	}, 10000);
+
+	app.use(function (req, res, next) {
+		var session;
+		if(req.query.sessionId) {
+			session = sessions[req.query.sessionId];
+			if(sessions[req.query.sessionId]) {
+				session.lastActive = Date.now();
+			}
+		}
+		
+		next();
+	});
+
 	var sendPGResult = function (req, res) {
 		return function (err, result) {
 			if(err) {
@@ -122,6 +169,10 @@ pg.connect(config.pg_connection_string, function (err, client, done) {
 
 	var generateActivationCode = function () {
 		return crypto.randomBytes(64).toString('base64').replace(/\//g,'_').replace(/\+/g,'-').replace(/\=/g,'');
+	}
+
+	var generateSessionId = function () {
+		return crypto.randomBytes(16).toString('hex');
 	}
 
 	// activate author *idempotently*
@@ -224,11 +275,99 @@ pg.connect(config.pg_connection_string, function (err, client, done) {
 					details: null
 				});
 			} else {
-				res.status(200).send({
-					loggedIn: result.rows[0].logged_in
-				});
+				if(result.rows.length == 0) {
+					// for hysterical raisins the client expects a 200 on failed login requests
+					res.status(200).send({
+						loggedIn: false
+					});
+				} else {
+					var sessionId = generateSessionId();
+					sessions[sessionId] = {
+						authorId: result.rows[0].id,
+						// we kind of don't need to keep the email hanging around, but I see no reason not to either
+						email: req.body.email,
+						lastActive: Date.now()
+					};
+					res.status(200).send({
+						loggedIn: true,
+						sessionId: sessionId
+					});	
+				}
 			}
 		})
+	});
+
+	app.get('/robot', function (req, res) {
+		var sessionId = req.query.sessionId,
+			session;
+		if(sessionId && sessions[sessionId]) {
+			session = sessions[sessionId];
+			client.query(query.fetch_robots, [
+				session.authorId
+				], function (err, result) {
+					var repoUrl, robots, repoUrlResultRow;
+					if(err) {
+						res.status(500).send({
+							messsage: 'Postgres error',
+							details: err
+						});
+					} else {
+						robots = _.filter(result.rows, function (row) {
+							return !!row.class;
+						});
+						if(robots.length > 1) {
+							console.warn('More than one robot found for user: ', session.email);
+						} else if (robots.length == 0) {
+							robot = "";
+						} else {
+							robot = robots[0].class;
+						}
+						repoUrlResultRow = _.find(result.rows, function (row) {
+							return !!row.repo;
+						});
+						repoUrl = (repoUrlResultRow && repoUrlResultRow.repo) || "";
+						res.send({
+							robot: robot,
+							repoUrl: repoUrl
+						});
+					}
+				});
+		} else {
+			res.status(401).send({
+				message: 'Not authorized',
+				reason: sessionId ? 'Session timeout' : 'Not logged in'
+			});
+		}
+	});
+
+	app.put('/robot', function (req, res) {
+		var sessionId = req.query.sessionId,
+			session;
+		if(sessionId && sessions[sessionId]) {
+			session = sessions[sessionId];
+			client.query(query.update_robots, [
+				req.body.repoUrl,
+				req.body.robot,
+				session.authorId
+				], function (err, result) {
+					if(err) {
+						res.status(500).send({
+							messsage: 'Postgres error',
+							details: err
+						});
+					} else {
+						res.status(200).send({
+							repoUrl: req.body.repoUrl,
+							robot: req.body.robot
+						});
+					}
+				});
+		} else {
+			res.status(401).send({
+				message: 'Not authorized',
+				reason: sessionId ? 'Session timeout' : 'Not logged in'
+			});
+		}
 	});
 
 	app.get('/', function (req, res) {
@@ -247,3 +386,4 @@ pg.connect(config.pg_connection_string, function (err, client, done) {
 
 	app.listen(8000);
 });
+

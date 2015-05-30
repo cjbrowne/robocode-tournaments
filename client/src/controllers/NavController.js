@@ -3,5 +3,10 @@ module.exports = function ($scope, $rootScope) {
 	$rootScope.$watch('loggedIn', function (loggedIn) {
 		$scope.loggedIn = loggedIn;
 	});
-	
+	$scope.init = function () {
+		var potentialSessionId = sessionStorage.getItem('sessionId');
+		if (potentialSessionId) {
+			$rootScope.loggedIn = true;
+		}
+	}
 }

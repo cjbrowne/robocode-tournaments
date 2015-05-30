@@ -20,7 +20,6 @@ module.exports = function ($scope, AuthService, $rootScope, $location) {
 			email: $scope.email,
 			password: $scope.password
 		}).success(function (data, status, headers, config) {
-			console.log(data);
 			$rootScope.loggedIn = data.loggedIn;
 			if(data.loggedIn) {
 				$location.path('/');
@@ -29,7 +28,6 @@ module.exports = function ($scope, AuthService, $rootScope, $location) {
 				$scope.flashIsError = true;
 				$scope.showFlashMessage = true;
 			}
-			console.log('foo');
 		}).error(function (data, status, headers, config) {
 			$scope.flashIsError = true;
 			$scope.showFlashMessage = true;
@@ -40,7 +38,6 @@ module.exports = function ($scope, AuthService, $rootScope, $location) {
 			} else {
 				$scope.flashMessage = data.message || "Unknown error.";
 			}
-			console.log('bar');
 		});
 	}
 

@@ -1,0 +1,14 @@
+.robot-list {
+	padding: 0;
+	& .robot {
+		list-style: none;
+		position: relative;
+		& .delete-icon {
+			display: inline-block;
+			margin-left: -15px;
+		}
+		& .input-container {
+			display: inline-block;
+		}
+	}
+}

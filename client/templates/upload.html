@@ -1,0 +1,21 @@
+<div class="flash-message {{flashIsErrorMessage ? 'error' : ''}} alert" ng-show="showFlashMessage">
+{{flashMessage}}
+</div>
+<div class="" ng-hide="doneLoading">
+Loading robot data...
+</div>
+<form class="" ng-show="doneLoading">
+	<h2 class="form-heading">Change Robot Settings</h2>
+
+	<label for="repository">Repository URL</label>
+	<input type="url" id="repository" ng-model="repoUrl" class="form-control" placeholder="https://github.com/foo/bar" required autofocus />
+
+	<div class="robot">
+		<div class="input-container">
+			<label for="className">Robot Class Name</label>
+			<input type="text" id="className" ng-model="robot" class="form-control" placeholder="MyAwesomeRobot" />
+		</div>
+	</div>
+
+	<button type="submit" class="btn btn-default" ng-click="save()" ng-disable="!saveButtonEnabled">Save</button>
+</form>	

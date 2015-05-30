@@ -4,10 +4,11 @@
 		<title>Robocode Tournament</title>
 		<link rel="stylesheet" type="text/css" href="//cdnjs.cloudflare.com/ajax/libs/normalize/3.0.3/normalize.min.css" />
 		<link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css" rel="stylesheet">
+		<link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
 		<link rel="stylesheet" type="text/css" href="css/robotorn.css" />
 	</head>
 	<body>
-		<nav class="navbar navbar-inverse navbar-fixed-top navbar-collapse collapse" ng-controller="NavController">
+		<nav class="navbar navbar-inverse navbar-fixed-top navbar-collapse collapse" ng-controller="NavController" ng-init="init()">
 			<ul class="nav navbar-nav">
 				<li>
 					<a href="#/">Home</a>
@@ -16,7 +17,7 @@
 					<a href="#/standings">Standings</a>
 				</li>
 				<li ng-show="loggedIn">
-					<a href="#/upload">Upload Robot</a>
+					<a href="#/robot">My Robot</a>
 				</li>
 			</ul>
 			<ul class="nav navbar-nav navbar-right">
