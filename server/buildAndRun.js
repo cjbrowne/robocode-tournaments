@@ -55,18 +55,20 @@ module.exports = function buildAndRun() {
 
 			Git.Clone(robot.repo, 'workspace/' + robot.class)
 				.then(function (repository) {
-					child_process.exec('mvn install', {
-						cwd: __dirname + '/workspace/' + robot.class
-					}, function (err, stdin, stdout) {
-						if(err) {
-							console.log('maven error', err);
+					var kid = child_process.spawn('mvn', ['install'], {
+						cwd: __dirname + '/workspace/' + robot.class,
+						stdio: 'inherit'
+					});
+					kid.on('close', function (code) {
+						if(code != 0) {
+							console.log('maven error', code);
 							setBuildStatus('FAILED_MAVEN', robot.id).then(nextRobot);
 						} else {
 							// for now, this is it.  We will add more tests later
 							console.log('build passing', robot);
 							setBuildStatus('SUCCESS', robot.id).then(nextRobot);
 						}
-					});
+					})
 				}, function (err) {
 					console.log('git clone error', err);
 					setBuildStatus('FAILED_GIT', robot.id).then(nextRobot);
