@@ -12,6 +12,8 @@ var crypto = require('crypto');
 var sendmail = require('./sendmail');
 var safeGetConfig = require('./configHelper');
 
+var buildAndMaybeRun = require('./buildAndRun');
+
 // use CRUD verbs for db operations
 var query = {
 	// is read_participants actually used?
@@ -38,23 +40,46 @@ var query = {
 					AND secret=$2\
 			',
 	fetch_robots: '\
-			SELECT class, repo\
+			SELECT class, repo, build_status\
 				FROM participant\
 				WHERE author = $1::integer\
 			',
+	update_robots: '\
+			WITH new_values (repo, class, author) AS (\
+				values\
+					($1::text, $2::text, $3::integer)\
+			),\
+			upsert AS\
+			(\
+				UPDATE participant p\
+					SET repo = nv.repo,\
+						class = nv.class\
+					FROM new_values nv\
+					WHERE p.author = nv.author\
+					RETURNING p.*\
+			)\
+			INSERT INTO participant (repo, class, author)\
+			SELECT repo, class, author\
+			FROM new_values\
+			WHERE NOT EXISTS (SELECT 1\
+								FROM upsert up\
+								WHERE up.author = new_values.author)\
+			'
+			/* -- old update robots
 	update_robots: '\
 			INSERT INTO participant (repo, class, author)\
 				SELECT $1::text, $2::text, $3::integer\
 				WHERE NOT EXISTS (\
 						SELECT * FROM participant WHERE author = $3::integer\
 					)\
-			'
-			/*
 			;\
 			UPDATE participant\
-				SET repo = $1::text, class = $2::text\
+				SET \
+					repo = $1::text,\
+					class = $2::text\
 				WHERE author = $3::integer\
-	'*/
+			'
+			*/
 };
 
 // even though we might never start listening, best to prepare the app above any logic
@@ -98,7 +123,7 @@ var rateLimit = function (maxTries, req, res, resource) {
 	// after a minute, remove this attempt
 	setTimeout(function () {
 		requestCount[req.ip]--;
-	}, 60000);
+	}, 10000);
 	if(requestCount[req.ip] && requestCount[req.ip] > 15) {
 		// rate limit those fuckers
 		res.status(418).send({
@@ -111,11 +136,15 @@ var rateLimit = function (maxTries, req, res, resource) {
 	return false;
 }
 
+// start the builder and tournament runner
+buildAndMaybeRun();
+
 pg.connect(config.pg_connection_string, function (err, client, done) {
 	if(err) {
 		console.log('pg error',err);
 		return;
 	}
+
 
 	// for simplicity's sake, just an in-memory hashtable of sessions (won't work at scale but this whole project won't work at scale)
 	var sessions = {};
@@ -305,7 +334,10 @@ pg.connect(config.pg_connection_string, function (err, client, done) {
 			client.query(query.fetch_robots, [
 				session.authorId
 				], function (err, result) {
-					var repoUrl, robots, repoUrlResultRow;
+					var repoUrl, robots, repoUrlResultRow, buildStatus = {
+						friendlyName: 'unknown',
+						className: 'unknown'
+					};
 					if(err) {
 						res.status(500).send({
 							messsage: 'Postgres error',
@@ -326,14 +358,25 @@ pg.connect(config.pg_connection_string, function (err, client, done) {
 							return !!row.repo;
 						});
 						repoUrl = (repoUrlResultRow && repoUrlResultRow.repo) || "";
+
+						switch(repoUrlResultRow.build_status) {
+							case 'FAILED_MAVEN':
+								buildStatus.className = 'red';
+								buildStatus.friendlyName = 'maven';
+								break;
+							case 'FAILED_GIT':
+								buildStatus.className = 'red';
+								buildStatus.friendlyName = 'git';
+								break;
+							case 'SUCCESS': 
+								buildStatus.className = 'green';
+								buildStatus.friendlyName = 'passing';
+								break;
+						}
 						res.send({
 							robot: robot,
 							repoUrl: repoUrl,
-							// TODO: add build status to the database
-							buildStatus: {
-								className: 'unknown',
-								friendlyName: 'unknown'
-							}
+							buildStatus: buildStatus
 						});
 					}
 				});

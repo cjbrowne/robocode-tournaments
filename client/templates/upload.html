@@ -19,13 +19,8 @@ Loading robot data...
 	<br />
 	It can be red for the following reasons:
 	<ul>
-		<li>The repository does not exist or is not readable by the server</li>
-		<li>The robot class specified was not found in the repository (check your spelling)</li>
-		<li>The repository's pom.xml file was missing or corrupt (make sure it's checked in)</li>
-		<li>The repository does not produce a JAR file when the "mvn3 install" command is issued (verify locally before committing)</li>
-		<li>The JAR file is not placed in the correct location (the server expects it to be in the './target/' directory relative to the project root)</li>
-		<li>There is more than one JAR file in the './target/' directory (make sure you're not outputting a separate library or something, that will not work)</li>
-		<li>The build takes longer than the designated timeout (please contact the project administrators to find out what that is for this tournament); note that this is extremely unlikely unless you are actively trying to screw with the build server.</li>
+		<li>git: The repository does not exist or is not readable by the server</li>
+		<li>maven: The 'maven install' command failed on the server</li>
 	</ul>
 	</p>
 
