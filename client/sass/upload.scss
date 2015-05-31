@@ -1,14 +1,24 @@
-.robot-list {
-	padding: 0;
-	& .robot {
-		list-style: none;
-		position: relative;
-		& .delete-icon {
-			display: inline-block;
-			margin-left: -15px;
-		}
-		& .input-container {
-			display: inline-block;
-		}
+.build-status {
+	background-color: #333;
+	color: #000;
+	padding: 3px;
+	padding-left: 0;
+	border-radius: 3px;
+	font-family: monospace;
+	&:before {
+		content: 'Build status';
+		background-color: #333;
+		color: #fff;
+		padding: 3px;
+		margin: 0;
+		margin-right: 3px;
+		border-radius: 3px;
+	}
+	&.unknown {
+		background-color: #cc0;
+	}
+
+	&.red {
+		background-color: #c00;
 	}
 }

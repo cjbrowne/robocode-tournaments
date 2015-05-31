@@ -7,10 +7,34 @@ Loading robot data...
 <form class="" ng-show="doneLoading">
 	<h2 class="form-heading">Change Robot Settings</h2>
 
-	<label for="repository">Repository URL</label>
-	<input type="url" id="repository" ng-model="repoUrl" class="form-control" placeholder="https://github.com/foo/bar" required autofocus />
+
+	<p class="explanation">
+	The repository URL you set below should point to a git repository that is readable by the tournament runner.  If it is a private repository, please contact the tournament organisers to arrange for access to be granted to the tournament runner.
+	</p>
+	<p class="explanation">
+	The robot class name should be the name of a class within the repository that refers to your robot.
+	</p>
+	<p class="explanation">
+	The build status indicator must be green at the time when the competition starts in order for your robot to enter the competition.
+	<br />
+	It can be red for the following reasons:
+	<ul>
+		<li>The repository does not exist or is not readable by the server</li>
+		<li>The robot class specified was not found in the repository (check your spelling)</li>
+		<li>The repository's pom.xml file was missing or corrupt (make sure it's checked in)</li>
+		<li>The repository does not produce a JAR file when the "mvn3 install" command is issued (verify locally before committing)</li>
+		<li>The JAR file is not placed in the correct location (the server expects it to be in the './target/' directory relative to the project root)</li>
+		<li>There is more than one JAR file in the './target/' directory (make sure you're not outputting a separate library or something, that will not work)</li>
+		<li>The build takes longer than the designated timeout (please contact the project administrators to find out what that is for this tournament); note that this is extremely unlikely unless you are actively trying to screw with the build server.</li>
+	</ul>
+	</p>
+
 
 	<div class="robot">
+		<span class="build-status {{buildStatus.className}}">{{buildStatus.friendlyName}}</span>
+		<br />
+		<label for="repository">Repository URL</label>
+		<input type="url" id="repository" ng-model="repoUrl" class="form-control" placeholder="https://github.com/foo/bar" required autofocus />
 		<div class="input-container">
 			<label for="className">Robot Class Name</label>
 			<input type="text" id="className" ng-model="robot" class="form-control" placeholder="MyAwesomeRobot" />

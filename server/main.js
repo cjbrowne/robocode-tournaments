@@ -328,7 +328,12 @@ pg.connect(config.pg_connection_string, function (err, client, done) {
 						repoUrl = (repoUrlResultRow && repoUrlResultRow.repo) || "";
 						res.send({
 							robot: robot,
-							repoUrl: repoUrl
+							repoUrl: repoUrl,
+							// TODO: add build status to the database
+							buildStatus: {
+								className: 'unknown',
+								friendlyName: 'unknown'
+							}
 						});
 					}
 				});

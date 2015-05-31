@@ -4,6 +4,10 @@ module.exports = function ($scope, $rootScope, RobotService) {
 	$scope.robot = '';
 	$scope.saveButtonEnabled = false;
 
+	$scope.buildStatus = {
+		className: 'unknown',
+		friendlyName: 'unknown'
+	}
 
 	var loadRobotPromise = RobotService.loadRobots();
 	if(loadRobotPromise) {
@@ -16,6 +20,7 @@ module.exports = function ($scope, $rootScope, RobotService) {
 				$scope.robot = data.robot;
 				$scope.doneLoading = true;
 				$scope.saveButtonEnabled = true;
+				$scope.buildStatus = data.buildStatus;
 			})
 			.error(function (data, status, headers, config) {
 				if(status == 401) {
