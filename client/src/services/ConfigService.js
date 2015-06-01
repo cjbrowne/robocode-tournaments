@@ -1,7 +1,7 @@
 // TODO: work out how to make this configurable at run and/or compile time.
 
 module.exports = function ($http) {
-	const BASE_URL = "http://localhost:8000";
+	const BASE_URL = "http://teenwolf.stho.kambi.com:8000";
 	var configService = {};
 
 
