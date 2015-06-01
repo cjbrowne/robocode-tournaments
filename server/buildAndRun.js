@@ -6,6 +6,8 @@ var _ = require('lodash-node');
 var Git = require('nodegit');
 var child_process = require('child_process');
 var rimraf = require('rimraf');
+var fs = require('fs');
+var glob = require('glob');
 
 var query = {
 	fetch_robots: '\
@@ -41,6 +43,7 @@ module.exports = function buildAndRun() {
 
 		var recursiveBuildRobot = function (buildQueue, onAllRobotsBuilt) {
 			var robot = buildQueue.shift();
+			var wdPath = __dirname + '/workspace/' + robot.class;
 			console.log('building', robot.class);
 
 			var nextRobot = function () {
@@ -51,22 +54,33 @@ module.exports = function buildAndRun() {
 				}
 			}
 
-			rimraf.sync('workspace/' + robot.class);
+			rimraf.sync(wdPath);
 
 			Git.Clone(robot.repo, 'workspace/' + robot.class)
 				.then(function (repository) {
-					var kid = child_process.spawn('mvn', ['install'], {
-						cwd: __dirname + '/workspace/' + robot.class,
+					var mavenProcess = child_process.spawn('mvn', ['install'], {
+						cwd: wdPath,
 						stdio: 'inherit'
 					});
-					kid.on('close', function (code) {
+					mavenProcess.on('close', function (code) {
 						if(code != 0) {
 							console.log('maven error', code);
 							setBuildStatus('FAILED_MAVEN', robot.id).then(nextRobot);
 						} else {
 							// for now, this is it.  We will add more tests later
-							console.log('build passing', robot);
-							setBuildStatus('SUCCESS', robot.id).then(nextRobot);
+							glob(wdPath + '/target/*.jar', function (err, jarFiles) {
+								if(jarFiles.length > 1) {
+									console.log('ambiguous jars');
+									setBuildStatus('FAILED_JAR', robot.id).then(nextRobot);
+								} else {
+									if(!fs.existsSync('tournament')) {
+										fs.mkdirSync('tournament');
+									}
+									fs.createReadStream(jarFiles[0]).pipe(fs.createWriteStream('tournament/' + robot.class + '.jar'));
+									console.log('build passing', robot);
+									setBuildStatus('SUCCESS', robot.id).then(nextRobot);
+								}
+							});
 						}
 					})
 				}, function (err) {
@@ -93,6 +107,9 @@ module.exports = function buildAndRun() {
 		}
 
 		var runTournament = function () {
+			glob('tournament/*.jar', function (err, files) {
+
+			});
 			done();
 		}
 		var rawTournamentTime = safeGetConfig('tournament.start');
