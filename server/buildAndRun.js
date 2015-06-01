@@ -149,8 +149,7 @@ module.exports = function buildAndRun() {
 
 					runTournament();
 				}
-				// regardless of whether we want to run the tournament, we want to build again in 1 minute
-				setTimeout(_.bind(buildAndRun, self, client), 60000);
+				setTimeout(_.bind(buildAndRun, self, client), safeGetConfig('build.frequency', 1) * 60000);
 			});
 	});
 }
